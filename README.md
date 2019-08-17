@@ -1,2 +1,2 @@
-# php-error-log-viewer
-A PHP error log viewer for ClassicPress.
+# PHP Error Log Viewer
+A PHP error log viewer plugin for ClassicPress.
