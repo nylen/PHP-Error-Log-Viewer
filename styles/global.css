@@ -8,7 +8,7 @@
  * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Full
  * text of the license is available at https://www.gnu.org/licenses/gpl-2.0.txt.
  * -----------------------------------------------------------------------------
- * Copyright © 2019 CodePotent
+ * Copyright 2020, Code Potent
  * -----------------------------------------------------------------------------
  *           ____          _      ____       _             _
  *          / ___|___   __| | ___|  _ \ ___ | |_ ___ _ __ | |_
@@ -20,6 +20,27 @@
  */
 
 /** ----------------------------------------------------------------------------
+	Admin bar alerts.
+ * ---------------------------------------------------------------------------*/
+#wp-admin-bar-codepotent_php_error_log_viewer_admin_bar .error-count-bubble,
+#wp-admin-bar-codepotent_php_error_log_viewer_admin_bar .error-count-bubble.hidden-errors {
+	vertical-align:text-middle;
+	margin:1px 0 0 7px;
+	padding:0 5px;
+	min-width:7px;
+	height:17px;
+	border-radius:11px;
+	background-color:#ca4a1f;
+	color:#fff;
+	line-height:17px;
+	text-align:center;
+	z-index:26;
+	}
+#wp-admin-bar-codepotent_php_error_log_viewer_admin_bar .error-count-bubble.hidden-errors {
+	background:#777;
+	}	
+
+/** ----------------------------------------------------------------------------
 	Outer container.
  * ---------------------------------------------------------------------------*/
 #codepotent-php-error-log-viewer {
@@ -29,24 +50,13 @@
 	Error log not found.
  * ---------------------------------------------------------------------------*/
 #codepotent-php-error-log-viewer-not-found {
-	width:100%;
-	max-width:600px;
 	}
 #codepotent-php-error-log-viewer-not-found textarea {
 	overflow:hidden;
 	font-family:monospace;
-	padding:5px 10px;
+	padding:15px 20px;
 	width:100%;
 	}
-#codepotent-php-error-log-viewer-not-found textarea.solution-one {
-	height:30px;
-	}
-#codepotent-php-error-log-viewer-not-found textarea.solution-two {
-	height:50px;
-	}	
-#codepotent-php-error-log-viewer-not-found textarea.solution-three {
-	height:70px;
-	}	
 
 /** ----------------------------------------------------------------------------
 	Filter checkboxes.
@@ -62,6 +72,12 @@
 	vertical-align:baseline;
 	margin-right:15px;
 	}
+.codepotent-php-error-log-viewer-option-divider {
+	display:inline;
+	margin-right:15px;
+	border-left:1px solid #bbb;
+	height:100%;
+}
 
 /** ----------------------------------------------------------------------------
 	Refresh and purge buttons.

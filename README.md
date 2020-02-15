@@ -1,7 +1,7 @@
-# PHP Error Log Viewer for ClassicPress
+# Important
 
-> Bring your PHP error log into your ClassicPress dashboard with beautiful style! Color-coding and filterable results make your error log a super quick skim – no more wall-of-text error messages!
+Only use the **[latest release](https://github.com/codepotent/php-error-log-viewer/releases/latest)** on production sites! Downloading or cloning any branch is not going to get you a stable, working version.
 
-- [Download Latest Version](https://github.com/codepotent/php-error-log-viewer/releases/latest)
-- [Download Previous Versions](https://github.com/codepotent/php-error-log-viewer/releases/)
-- [Online Documentation](https://codepotent.com/classicpress/plugins/)
+**See Also**: [Online Docs](https://codepotent.com/classicpress/plugins/) **|** [Support Forum](https://forums.classicpress.net/c/plugins/plugin-support/67)
+
+[![](https://static.codepotent.com/images/logotype/code-potent-logotype-wordmark-748x107.png)](https://codepotent.com/classicpress/plugins/)
