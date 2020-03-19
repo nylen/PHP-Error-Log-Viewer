@@ -4,7 +4,7 @@
  * -----------------------------------------------------------------------------
  * Plugin Name: PHP Error Log Viewer
  * Description: Creates a browser-viewable display of the PHP error log. Error messages are styled and filterable to facilitate quick skimming.
- * Version: 2.0.1
+ * Version: 2.1.0
  * Author: Code Potent
  * Author URI: https://codepotent.com
  * Plugin URI: https://codepotent.com/classicpress/plugins/
@@ -212,7 +212,7 @@ class PhpErrorLogViewer {
 		add_submenu_page(
 			'tools.php',
 			PLUGIN_NAME,
-			MENU_TEXT,
+			PLUGIN_MENU_TEXT,
 			'manage_options',
 			PLUGIN_SHORT_SLUG,
 			[$this, 'render_php_error_log']
@@ -1087,7 +1087,7 @@ class PhpErrorLogViewer {
 
 		// Are we on this post type's screen? If so, change the footer text.
 		if (strpos(get_current_screen()->base, PLUGIN_SHORT_SLUG)) {
-			$text = '<span id="footer-thankyou" style="vertical-align:text-bottom;"><a href="'.VENDOR_PLUGIN_URL.'/" title="'.PLUGIN_DESCRIPTION.'">'.PLUGIN_NAME.'</a> '.PLUGIN_VERSION.' &#8212; by <a href="'.VENDOR_HOME_URL.'" title="'.VENDOR_TAGLINE.'"><img src="'.VENDOR_WORDMARK_URL.'" alt="'.VENDOR_TAGLINE.'" style="height:1.02em;vertical-align:sub !important;"></a></span>';
+			$text = '<span id="footer-thankyou" style="vertical-align:text-bottom;"><a href="'.VENDOR_PLUGIN_URL.'/" title="'.PLUGIN_DESCRIPTION.'">'.PLUGIN_NAME.'</a> '.PLUGIN_VERSION.' &#8211; by <a href="'.VENDOR_HOME_URL.'" title="'.VENDOR_TAGLINE.'"><img src="'.VENDOR_WORDMARK_URL.'" alt="'.VENDOR_TAGLINE.'" style="height:1.02em;vertical-align:sub !important;"></a></span>';
 		}
 
 		// Return the string.

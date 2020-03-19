@@ -3,7 +3,6 @@
 /**
  * -----------------------------------------------------------------------------
  * Purpose: Namespaced constants for ClassicPress plugins.
- * Version: 1.0.0
  * Author: Code Potent
  * Author URI: https://codepotent.com
  * -----------------------------------------------------------------------------
@@ -46,8 +45,7 @@ const PLUGIN_SHORT_SLUG = 'php-error-log-viewer';
 // Ex: dashicons-whatever
 const PLUGIN_MENU_ICON = null;
 // Ex: Admin Menu Text
-//const PLUGIN_MENU_TEXT = 'PHP Error Log';
-define(__NAMESPACE__.'\MENU_TEXT', esc_html__('PHP Error Log', 'codepotent-php-error-log-viewer'));
+define(__NAMESPACE__.'\PLUGIN_MENU_TEXT', esc_html__('PHP Error Log', 'codepotent-php-error-log-viewer'));
 // Ex: 23
 const PLUGIN_MENU_POS = null;
 // Ex: plugin_folder_name
@@ -88,7 +86,7 @@ define(__NAMESPACE__.'\PATH_HOME', untrailingslashit(get_home_path()));
 // Ex: /home/user/mysite/wp-admin
 const PATH_ADMIN = PATH_HOME.'/wp-admin';
 // Ex: /home/user/mysite/wp-content/plugins
-const PATH_PLUGINS = WP_PLUGIN_DIR;
+define(__NAMESPACE__.'\PATH_PLUGINS', untrailingslashit(plugin_dir_path(dirname(dirname(__FILE__)))));
 // Ex: /home/user/mysite/wp-content/plugins/my-plugin-name
 const PATH_SELF = PATH_PLUGINS.'/'.PLUGIN_SLUG;
 // Ex: /home/user/mysite/wp-content/plugins/my-plugin-name/classes
