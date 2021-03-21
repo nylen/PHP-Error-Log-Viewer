@@ -38,7 +38,7 @@
 	}
 #wp-admin-bar-codepotent_php_error_log_viewer_admin_bar .error-count-bubble.hidden-errors {
 	background:#777;
-	}	
+	}
 
 /** ----------------------------------------------------------------------------
 	Outer container.
@@ -82,7 +82,11 @@
 /** ----------------------------------------------------------------------------
 	Refresh and purge buttons.
  * ---------------------------------------------------------------------------*/
-.codepotent-php-error-log-viewer-buttons {
+.codepotent-php-error-log-viewer-buttons-top a,
+.codepotent-php-error-log-viewer-buttons-bottom a {
+	margin-left:10px !important;
+	}
+.codepotent-php-error-log-viewer-buttons-bottom {
 	margin-top:10px;
 	}
 
@@ -95,6 +99,12 @@
 	clear:both;
 	text-align:right;
 	}
+.codepotent-php-error-log-viewer-filesize span {
+	font-family:Consolas, "Courier New", monospace;
+	opacity:.75;
+	vertical-align:unset;
+	}
+
 
 /** ----------------------------------------------------------------------------
 	Legend positioning.
@@ -118,7 +128,7 @@
 	Color-coding for legend and errors.
  * ---------------------------------------------------------------------------*/
 /* Deprecated code. */
-#codepotent-php-error-log-viewer .php-deprecated, 
+#codepotent-php-error-log-viewer .php-deprecated,
 .codepotent-php-error-log-viewer-legend-box.item-php-deprecated {
 	border-left:10px solid #847545;
 	}
@@ -144,6 +154,12 @@
 .codepotent-php-error-log-viewer-legend-box.item-php-stack-trace-title {
 	border-left:10px solid #ef9a9a;
 	}
+#codepotent-php-error-log-viewer .php-user-generated-entry {
+	margin-top:-15px;
+	padding:25px;
+	border-left:10px solid #f0e8a8;
+	background:#fff;
+	}
 /* Any other messages. */
 #codepotent-php-error-log-viewer .php-other,
 .codepotent-php-error-log-viewer-legend-box.item-php-other {
@@ -155,6 +171,7 @@
  * ---------------------------------------------------------------------------*/
 #codepotent-php-error-log-viewer .error-log-row {
 	padding:10px;
+	margin-top:25px;
 	background:#fff;
 	font-family:monospace;
 	}
@@ -172,7 +189,7 @@
 #codepotent-php-error-log-viewer .error-log-row strong {
 	color:#1e88e5;
 	}
-	
+
 /** ----------------------------------------------------------------------------
 	Stack trace positioning.
  * ---------------------------------------------------------------------------*/

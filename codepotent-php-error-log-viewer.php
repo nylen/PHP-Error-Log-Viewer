@@ -3,8 +3,8 @@
 /**
  * -----------------------------------------------------------------------------
  * Plugin Name: PHP Error Log Viewer
- * Description: Creates a browser-viewable display of the PHP error log. Error messages are styled and filterable to facilitate quick skimming.
- * Version: 2.1.0
+ * Description: Create a browser-viewable display of the PHP error log. Messages are styled, filterable, and reverse-sortable to facilitate quick skimming.
+ * Version: 2.2.0
  * Author: Code Potent
  * Author URI: https://codepotent.com
  * Plugin URI: https://codepotent.com/classicpress/plugins/
@@ -16,7 +16,7 @@
  * implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. Full
  * text of the license is available at https://www.gnu.org/licenses/gpl-2.0.txt.
  * -----------------------------------------------------------------------------
- * Copyright 2020, Code Potent
+ * Copyright 2021, Code Potent
  * -----------------------------------------------------------------------------
  *           ____          _      ____       _             _
  *          / ___|___   __| | ___|  _ \ ___ | |_ ___ _ __ | |_
@@ -38,42 +38,42 @@ if (!defined('ABSPATH')) {
 class PhpErrorLogViewer {
 
 	/**
-	 * Path to error log file.
+	 * Path to error log file
 	 *
 	 * @var null
 	 */
 	public $error_log = null;
 
 	/**
-	 * For tallying errors.
+	 * For tallying errors
 	 *
 	 * @var integer
 	 */
 	public $error_count = 0;
 
 	/**
-	 * For admin bar alert bubble.
+	 * For admin bar alert bubble
 	 *
 	 * @var integer
 	 */
 	public $errors_displayed = 0;
 
 	/**
-	 * For gathering plugin options.
+	 * For gathering plugin options
 	 *
 	 * @var array
 	 */
 	public $options = [];
 
 	/**
-	 * Multidimensional array of errors, keyed by type.
+	 * Multidimensional array of errors, keyed by type
 	 *
 	 * @var array[][]
 	 */
 	public $errors = [];
 
 	/**
-	 * Constructor.
+	 * Constructor
 	 *
 	 * No properties to set; move straight to initialization.
 	 *
@@ -82,6 +82,10 @@ class PhpErrorLogViewer {
 	 * @since 1.0.0
 	 */
 	public function __construct() {
+
+		if (!function_exists('\wp_get_current_user')) {
+			require_once(ABSPATH.'wp-includes/pluggable.php');
+		}
 
 		// Setup all the things.
 		$this->init();
@@ -92,7 +96,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Plugin initialization.
+	 * Plugin initialization
 	 *
 	 * Register actions and filters to hook the plugin into the system.
 	 *
@@ -106,6 +110,9 @@ class PhpErrorLogViewer {
 		require_once plugin_dir_path(__FILE__).'includes/constants.php';
 
 		// Load plugin update class.
+		require_once(PATH_INCLUDES.'/functions.php');
+
+		// Load plugin update class.
 		require_once(PATH_CLASSES.'/UpdateClient.class.php');
 
 		// Update options in time to redirect; keeps admin bar alerts current.
@@ -117,31 +124,38 @@ class PhpErrorLogViewer {
 		// Register admin page and menu item.
 		add_action('admin_menu', [$this, 'register_admin_menu']);
 
-		// Enqueue backend scripts.
-		add_action('admin_enqueue_scripts', [$this, 'enqueue_admin_scripts']);
+		// Admin notices for purge confirmations.
+		add_action('admin_notices', [$this, 'render_confirmation_notices']);
 
-		// Enqueue global styles for admin bar alerts on front and back end.
-		add_action('wp_enqueue_scripts', [$this, 'enqueue_global_styles']);
+		// Enqueue global scripts.
+		add_action('admin_enqueue_scripts', [$this, 'enqueue_global_scripts']);
+		add_action('wp_enqueue_scripts', [$this, 'enqueue_global_scripts']);
+
+		// Enqueue global styles.
 		add_action('admin_enqueue_scripts', [$this, 'enqueue_global_styles']);
+		add_action('wp_enqueue_scripts', [$this, 'enqueue_global_styles']);
 
-		// Add a quick link to the error log.
+		// Handle AJAX requests to purge the error log.
+		add_action('wp_ajax_purge_error_log', [$this, 'process_ajax_purge_requests']);
+
+		// Add error log link to admin bar.
 		add_action('wp_before_admin_bar_render', [$this, 'register_admin_bar']);
 
 		// Replace footer text with plugin name and version info.
- 		add_filter('admin_footer_text', [$this, 'filter_footer_text'], 10000);
+		add_filter('admin_footer_text', [$this, 'filter_footer_text'], 10000);
 
- 		// Add a "Settings" link to core's plugin admin row.
- 		add_filter('plugin_action_links_'.PLUGIN_IDENTIFIER, [$this, 'register_action_links']);
+		// Add a "Settings" link to core's plugin admin row.
+		add_filter('plugin_action_links_'.PLUGIN_IDENTIFIER, [$this, 'register_action_links']);
 
- 		// Register hooks for activation, deactivation, and uninstallation.
- 		register_uninstall_hook(__FILE__,    [__CLASS__, 'uninstall_plugin']);
- 		register_activation_hook(__FILE__,   [$this, 'activate_plugin']);
- 		register_deactivation_hook(__FILE__, [$this, 'deactivate_plugin']);
+		// Register hooks for activation, deactivation, and uninstallation.
+		register_uninstall_hook(__FILE__,    [__CLASS__, 'uninstall_plugin']);
+		register_activation_hook(__FILE__,   [$this, 'activate_plugin']);
+		register_deactivation_hook(__FILE__, [$this, 'deactivate_plugin']);
 
 	}
 
 	/**
-	 * Admin bar link.
+	 * Admin bar link
 	 *
 	 * Add a link to the admin bar that leads to the PHP error log; just a minor
 	 * convenience.
@@ -153,7 +167,7 @@ class PhpErrorLogViewer {
 	 */
 	public function register_admin_bar() {
 
-		// Only site admins can see the admin bar entry.
+		// Admins only.
 		if (!current_user_can('manage_options')) {
 			return;
 		}
@@ -177,10 +191,13 @@ class PhpErrorLogViewer {
 		$primary_alert = apply_filters(PLUGIN_PREFIX.'_primary_alert', $primary_alert);
 		$secondary_alert = apply_filters(PLUGIN_PREFIX.'_secondary_alert', $secondary_alert);
 
+		// Assemble the return URL.
+		$return_url = $_SERVER['REQUEST_SCHEME'].'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+
 		// Bring the admin bar into scope.
 		global $wp_admin_bar;
 
-		// Add the link.
+		// Add the main link.
 		$wp_admin_bar->add_menu([
 			'parent' => false,
 			'id'     => PLUGIN_PREFIX.'_admin_bar',
@@ -194,10 +211,22 @@ class PhpErrorLogViewer {
 			]
 		]);
 
+		// Add submenu item to purge log via AJAX; only if log is writeable.
+		if (is_writable($this->error_log)) {
+			$wp_admin_bar->add_menu([
+				'parent' => PLUGIN_PREFIX.'_admin_bar',
+				'title' => __('Purge Error Log'),
+				'id' => PLUGIN_SLUG.'-admin-bar-purge-link',
+				'href' => '#',
+				'meta' => [
+					'data-return-url' => esc_url($return_url)
+				]
+			]);
+		}
 	}
 
 	/**
-	 * Register admin view.
+	 * Register admin view
 	 *
 	 * Place a "PHP Error Log" submenu item under the core Tools menu. This also
 	 * registers the admin page for same.
@@ -211,7 +240,7 @@ class PhpErrorLogViewer {
 		// Add submenu under the Tools menu.
 		add_submenu_page(
 			'tools.php',
-			PLUGIN_NAME,
+			esc_html__('PHP Error Log', 'codepotent-php-error-log-viewer'),
 			PLUGIN_MENU_TEXT,
 			'manage_options',
 			PLUGIN_SHORT_SLUG,
@@ -221,7 +250,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Add a direct link to the PHP Error Log in the plugin admin display.
+	 * Add a direct link to the PHP Error Log in the plugin admin display
 	 *
 	 * @author John Alarcon
 	 *
@@ -245,47 +274,54 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Enqueue JavaScript.
+	 * Enqueue global scripts
 	 *
-	 * JavaScript is used to allow the user to confirm the decision to purge the
-	 * PHP error log; this prevents accidental deletion. Even though it's only a
-	 * few lines of "vanilla" JavaScript, it should stil be enqueued in the same
-	 * way as any other script.
+	 * This method enqueues scripts that are used by both admin and user sides.
 	 *
 	 * @author John Alarcon
 	 *
 	 * @since 1.0.0
 	 */
-	public function enqueue_admin_scripts() {
+	public function enqueue_global_scripts() {
 
-		// Not in a view related to this plugin? Bail.
-		if (!strpos(get_current_screen()->base, PLUGIN_SHORT_SLUG)) {
+		// Admins only.
+		if (!current_user_can('manage_options')) {
 			return;
 		}
 
-		// Enqueue the script.
-		wp_enqueue_script(PLUGIN_SLUG.'-admin', URL_SCRIPTS.'/admin-global.js');
+		// Applies for all admin views.
+		wp_enqueue_script(PLUGIN_SLUG.'-global', URL_SCRIPTS.'/global.js', ['jquery']);
 
-		// Create an array of data to make available in the JavaScript.
-		$js_vars = [
-			'plugin_slug' => PLUGIN_SLUG,
-			'question' => esc_html__('Remove all entries from the PHP error log?', 'codepotent-php-error-log-viewer'),
-			'redirect' => esc_url(
-				wp_nonce_url(
-					admin_url('tools.php?page='.PLUGIN_SHORT_SLUG.'&purge_errors=1'),
-					PLUGIN_PREFIX.'_purge_error_log'
+		// For redirecting back to the current page.
+		$redirect_target = (is_ssl()?'https://':'http://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+
+		// Setup a deletion-link URL.
+		$deletion_link = esc_url(
+			wp_nonce_url(
+				admin_url('tools.php?page='.PLUGIN_SHORT_SLUG.'&purge_errors=1&redirect_url='.$redirect_target),
+				PLUGIN_PREFIX.'_purge_error_log'
 				)
-			),
+			);
 
+		// Data to localize to JavaScript.
+		$localized_data = [
+			'prefix'            => PLUGIN_SLUG,
+			'ajax_url'          => admin_url('admin-ajax.php'),
+			'ajax_nonce'        => wp_create_nonce('purge_error_log'),
+			'deletion_link'     => $deletion_link,
+			'text_confirmation' => esc_html('Remove all entries from the PHP error log?', 'codepotent-php-error-log-viewer'),
+			'text_zero_bytes'   => esc_html('0 bytes', 'codepotent-php-error-log-viewer'),
+			'text_ajax_success' => esc_html('Error log successfully purged.', 'codepotent-php-error-log-viewer'),
+			'text_ajax_failure' => esc_html('Something went wrong; error log was not purged.', 'codepotent-php-error-log-viewer'),
 		];
 
 		// Scope the above PHP array out to the JS file.
-		wp_localize_script(PLUGIN_SLUG.'-admin', 'confirmation', $js_vars);
+		wp_localize_script(PLUGIN_SLUG.'-global', PLUGIN_PREFIX.'_data', $localized_data);
 
 	}
 
 	/**
-	 * Enqueue CSS.
+	 * Enqueue global styles
 	 *
 	 * As of version 2.0.0, the plugin integrates admin bar alerts. An admin bar
 	 * can be present in both (or either of) the front and back ends, so, styles
@@ -297,9 +333,14 @@ class PhpErrorLogViewer {
 	 *
 	 * @author John Alarcon
 	 *
-	 * @since 2.0.0
+	 * @since 2.2.0
 	 */
 	public function enqueue_global_styles() {
+
+		// Admins only.
+		if (!current_user_can('manage_options')) {
+			return;
+		}
 
 		// Used in admin bar alerts; enqueue for all needed pages.
 		if (is_admin_bar_showing()) {
@@ -331,7 +372,7 @@ class PhpErrorLogViewer {
 			$type = 'notice';
 		} else if (substr($error, 0, 11) === 'Stack trace' || strpos($error, 'Stack trace')) {
 			$type = 'stack_trace_title';
-		} else if (substr($error, 0, 1) === '#' || strpos($error, 'stderr: #')) {
+		} else if (substr($error, 0, 1) === '#' || strpos($error, 'stderr: #') || preg_match('|( PHP +[0-9]+\. )|', $error)) {
 			$type = 'stack_trace_step';
 		} else if (substr($error, 0, 9) === 'thrown in' || strpos($error, 'thrown in')) {
 			$type = 'stack_trace_origin';
@@ -339,6 +380,8 @@ class PhpErrorLogViewer {
 			$type = 'error';
 		} else if (strpos($error, 'PHP Warning') || strpos($error, '[warn]')) {
 			$type = 'warning';
+		} else if (strpos($error, '(') === 0 || strpos($error, ')') === 0 || strpos($error, '[') === 0 || strpos($error, ']') === 0 || strpos($error, 'in ') === 0 || empty($error)) {
+			$type = 'stack_trace_step';
 		} else {
 			$type = 'other';
 		}
@@ -379,7 +422,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Get error defaults.
+	 * Get error defaults
 	 *
 	 * This method is used to ensure all expected elements are initialized.
 	 *
@@ -415,6 +458,11 @@ class PhpErrorLogViewer {
 	 */
 	public function convert_error_log_into_properties() {
 
+		// Admins only.
+		if (!current_user_can('manage_options')) {
+			return;
+		}
+
 		// Initialization.
 		$this->errors = $this->raw_errors = [];
 
@@ -430,9 +478,7 @@ class PhpErrorLogViewer {
 		$this->filesize = filesize($error_log);
 
 		// Set a default errors array.
-		foreach (array_keys($this->get_error_types()) as $type) {
-			$this->errors[$type] = [];
-		}
+		$this->errors = $this->get_error_defaults();
 
 		// Set plugin options.
 		$this->options = get_option(PLUGIN_PREFIX, []);
@@ -458,6 +504,10 @@ class PhpErrorLogViewer {
 			// Capture only those errors that will be displayed.
 			if (!empty($this->options[$type])) {
 				$this->errors[$type][$n] = $error;
+			}
+			// For user-generated errors, remove the rogue line at the bottom.
+			if (strstr($error, 'User Generated')) {
+				$error = preg_replace('|(<\/pre> in )(.*)|', '</pre>', $error);
 			}
 			// Bold (most) error titles.
 			$this->errors[$type][$n] = preg_replace('|(PHP )([A-Za-z]){1,} *([A-Za-z ]){1,}|', '<strong>${0}</strong>', $error);
@@ -489,7 +539,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Purge error log.
+	 * Purge error log
 	 *
 	 * @author John Alarcon
 	 *
@@ -524,14 +574,46 @@ class PhpErrorLogViewer {
 			}
 		}
 
+		// In case we need a custom redirect.
+		$redirect_url = admin_url('tools.php?page='.PLUGIN_SHORT_SLUG);
+		if (!empty($_GET['redirect_url'])) {
+			$redirect_url = esc_url($_GET['redirect_url']);
+		}
+
 		// Redirect.
-		wp_safe_redirect(admin_url('tools.php?page='.PLUGIN_SHORT_SLUG));
+		wp_safe_redirect($redirect_url);
 		exit;
 
 	}
 
 	/**
-	 * Update filter options.
+	 * Purge error log via AJAX request.
+	 *
+	 * @author John Alarcon
+	 *
+	 * @since 2.2.0
+	 */
+	public function process_ajax_purge_requests() {
+
+		// Admins only.
+		if (!current_user_can('manage_options')) {
+			return;
+		}
+
+		// If nonce checks out, purge the error log.
+		if (check_ajax_referer( 'purge_error_log' )) {
+			if (!empty($this->error_log) && is_writable($this->error_log)) {
+				file_put_contents($this->error_log, '');
+			}
+		}
+
+		// ...and that's that.
+		wp_die();
+
+	}
+
+	/**
+	 * Update filter options
 	 *
 	 * This method updates the plugin's settings made with the checkboxes at the
 	 * top of the display; for filtering the displayed errors.
@@ -582,7 +664,10 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Render success message.
+	 * Render success message
+	 *
+	 * This is only used for a "traditional" log purge; that is, a purge that is
+	 * done via traditional URL, rather than AJAX.
 	 *
 	 * @author John Alarcon
 	 *
@@ -604,7 +689,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Markup filter inputs.
+	 * Markup filter inputs
 	 *
 	 * @author John Alarcon
 	 *
@@ -667,7 +752,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Markup jump links.
+	 * Markup jump links
 	 *
 	 * Because new errors always appear at the bottom, if the error log has many
 	 * entries, the user would have to scroll each time the page was loaded. The
@@ -698,9 +783,9 @@ class PhpErrorLogViewer {
 
 		// Markup the jump depending on whether it's for the header or footer.
 		if ($where === 'header') {
-			$markup .= '<a href="#nav-jump-bottom">'.esc_html__('Skip to bottom', 'codepotent-php-error-log-viewer').'</a>';
+			$markup .= '<a href="#nav-jump-bottom" class="'.PLUGIN_SLUG.'-jump-link">'.esc_html__('Skip to bottom', 'codepotent-php-error-log-viewer').'</a>';
 		} else {
-			$markup .= '<a id="nav-jump-bottom" href="#nav-jump-top">'.esc_html__('Back to top', 'codepotent-php-error-log-viewer').'</a>';
+			$markup .= '<a id="nav-jump-bottom" href="#nav-jump-top" class="'.PLUGIN_SLUG.'-jump-link">'.esc_html__('Back to top', 'codepotent-php-error-log-viewer').'</a>';
 		}
 
 		// Container.
@@ -712,7 +797,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Markup action buttons.
+	 * Markup action buttons
 	 *
 	 * Generates markup for the buttons used to refresh and purge the error log.
 	 * This is always used at the top of the display. If there are enough errors
@@ -723,25 +808,31 @@ class PhpErrorLogViewer {
 	 *
 	 * @since 1.0.0
 	 *
+	 * @param $where string Location, top or bottom.
+	 *
 	 * @return string HTML markup for refresh and purge buttons.
 	 */
-	public function markup_action_buttons() {
+	public function markup_action_buttons($where) {
+
+		if ($where !== 'top') {
+			$where = 'bottom';
+		}
 
 		// Open containers.
-		$markup = '<div class="'.PLUGIN_SLUG.'-buttons">';
+		$markup = '<div class="'.PLUGIN_SLUG.'-buttons-'.$where.'">';
 		$markup .= '<span class="alignright">';
 
 		// Refresh button.
-		$markup .= '<a href="'.admin_url('tools.php?page='.PLUGIN_SHORT_SLUG).'" class="button button-secondary">'.esc_html__('Refresh Error Log', 'codepotent-php-error-log-viewer').'</a>';
+		$markup .= '<a href="'.admin_url('tools.php?page='.PLUGIN_SHORT_SLUG).'" class="button button-secondary '.PLUGIN_SLUG.'-buttons">'.esc_html__('Refresh Error Log', 'codepotent-php-error-log-viewer').'</a>';
 
 		// Purge button; if log is writeable.
 		if (is_writable($this->error_log)) {
-			$markup .= '<a href="#" id="'.PLUGIN_SLUG.'-confirm-purge" class="button button-secondary">'.esc_html__('Purge Error Log', 'codepotent-php-error-log-viewer').'</a>';
+			$markup .= '<a href="#" id="'.PLUGIN_SLUG.'-confirm-purge-'.$where.'" class="button button-secondary '.PLUGIN_SLUG.'-buttons">'.esc_html__('Purge Error Log', 'codepotent-php-error-log-viewer').'</a>';
 		}
 
 		// Close containers.
 		$markup .= '</span>';
-		$markup .= '</div><!-- .'.PLUGIN_SLUG.'_buttons -->';
+		$markup .= '</div><!-- .'.PLUGIN_SLUG.'_buttons ['.$where.'] -->';
 
 		// Return the string.
 		return $markup;
@@ -749,43 +840,62 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Markup error log size.
+	 * Markup error log size
 	 *
 	 * @author John Alarcon
 	 *
 	 * @since 1.0.0
 	 *
-	 * @return string Text representation, ie, 123 bytes, 10.3 Kb, 1.2 Mb
+	 * @deprecated As of 2.2.0, use markup_filesize_location_indicator instead.
+	 *
+	 * @return string Text representation, ie, 123 bytes, 10.3 kB, 1.2 MB
 	 */
 	public function markup_filesize_indicator() {
+
+		return $this->markup_filesize_location_indicator();
+
+	}
+
+	/**
+	 * Markup error log size and location.
+	 *
+	 * @author John Alarcon
+	 *
+	 * @since 2.2.0
+	 *
+	 * @return string Text representation, ie, 123 bytes, 10.3 kB, 1.2 MB
+	 */
+	public function markup_filesize_location_indicator() {
 
 		// Cast the log size.
 		settype($this->filesize, 'int');
 
 		// Setup default display text.
 		$display_text = sprintf(
-				esc_html__('%d bytes', 'codepotent-php-error-log-viewer'),
-				$this->filesize
-				);
+			esc_html__('%d bytes', 'codepotent-php-error-log-viewer'),
+			$this->filesize
+			);
 
-		// Is error log greater than 1Mb? Change the text to suit.
+		// Is error log greater than 1MB? Change the text to suit.
 		if ($this->filesize > 1000000) {
 			$display_text = sprintf(
-					esc_html__('%d Mb', 'codepotent-php-error-log-viewer'),
-					round($this->filesize/1000000, 1)
-					);
+				esc_html__('%d MB', 'codepotent-php-error-log-viewer'),
+				round($this->filesize/1000000, 1)
+				);
 		}
-		// Is error log greater than 1Kb? Change the text to suit.
+		// Is error log greater than 1kB? Change the text to suit.
 		else if ($this->filesize > 1000) {
 			$display_text = sprintf(
-					esc_html__('%d Kb', 'codepotent-php-error-log-viewer'),
-					round($this->filesize/1000, 1)
-					);
+				esc_html__('%d kB', 'codepotent-php-error-log-viewer'),
+				round($this->filesize/1000, 1)
+				);
 		}
 
-		// Markup filesize display.
+		// Markup file location and filesize.
 		$markup = '<div class="'.PLUGIN_SLUG.'-filesize">';
-		$markup .= '<strong>'.esc_html__('Log Size', 'codepotent-php-error-log-viewer').'</strong>: '.$display_text;
+		$markup .= '<strong>'.esc_html__('Log File', 'codepotent-php-error-log-viewer').'</strong>: <span>'.$this->error_log.'</span>';
+		$markup .= ' &nbsp; ';
+		$markup .= '<strong>'.esc_html__('Log Size', 'codepotent-php-error-log-viewer').'</strong>: <span class="log-size">'.$display_text.'</span>';
 		$markup .= '</div>';
 
 		// Return the string.
@@ -794,7 +904,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Markup information legend.
+	 * Markup information legend
 	 *
 	 * @author John Alarcon
 	 *
@@ -821,7 +931,7 @@ class PhpErrorLogViewer {
 		}
 
 		// Close container.
-		$markup .= '</div> <!-- .'.PLUGIN_SLUG.'-legend -->';
+		$markup .= '</div> <!-- .'.PLUGIN_SLUG.'-legend -->'."\n";
 
 		// Return the markup.
 		return $markup;
@@ -829,7 +939,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Markup error rows.
+	 * Markup error rows
 	 *
 	 * This method handles markup generation for the error entries.
 	 *
@@ -854,7 +964,7 @@ class PhpErrorLogViewer {
 			$type = $this->error_map[$n];
 
 			// Not currently displaying this type of error? Next!
-			if (!$this->options[$type]) {
+			if (empty($this->options[$type])) {
 				continue;
 			}
 
@@ -870,9 +980,9 @@ class PhpErrorLogViewer {
 			}
 
 			// Mark up the error row.
-			$markup .= '<p class="error-log-row php-'.str_replace('_', '-', $type).'"'.$style.'>';
+			$markup .= '<div class="error-log-row php-'.str_replace('_', '-', $type).'"'.$style.'>';
 			$markup .= $this->errors[$type][$n];
-			$markup .= '</p>';
+			$markup .= '</div>'."\n";
 
 		}
 
@@ -956,7 +1066,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Provide notice and possible solutions if error log not found.
+	 * Provide notice and possible solutions if error log not found
 	 *
 	 * @author John Alarcon
 	 *
@@ -980,12 +1090,18 @@ class PhpErrorLogViewer {
 		$markup .= '<h3>'.esc_html__('Possible Solution', 'codepotent-php-error-log-viewer').'</h3>';
 		$markup .= '<p>';
 		$markup .= sprintf(
-				esc_html__('Open your %1$swp-config.php%2$s file and find the line that reads %1$sdefine(\'WP_DEBUG\', false);%2$s. Replace that single line with the following five (5) lines. Be sure to change the path to reflect the location of your PHP error log file. You can (and should) place your error log file outside your publicly accessible web directory.', 'codepotent-php-error-log-viewer'),
+				esc_html__('Open your %1$swp-config.php%2$s file and find the line that reads %1$sdefine(\'WP_DEBUG\', false);%2$s. Replace that single line with all of the following lines. Be sure to change the path to reflect the location of your PHP error log file. You can (and should) place your error log file outside your publicly accessible web directory.', 'codepotent-php-error-log-viewer'),
 				'<code>',
 				'</code>'
 				);
 		$markup .= '</p>';
-		$markup .= '<p><textarea rows="5">$error_log_file = \'/path/to/your/php/error/log/file.log\';'."\n".'define(\'WP_DEBUG\', true);'."\n".'define(\'WP_DEBUG_DISPLAY\', false);'."\n".'define(\'WP_DEBUG_LOG\', $error_log_file);'."\n".'ini_set(\'error_log\', $error_log_file);</textarea></p>';
+		$markup .= '<p><textarea rows="14">';
+		$markup .= '// Define a custom error log file'."\n".'$error_log_file = \'/path/to/php-error-log-Rh2Eu3r5V7e5Wrha.log\';'."\n\n";
+		$markup .= '// Turn on ClassicPress debugging'."\n".'define(\'WP_DEBUG\', true);'."\n\n";
+		$markup .= '// Turn off error display'."\n".'define(\'WP_DEBUG_DISPLAY\', false);'."\n\n";
+		$markup .= '// Prevent ClassicPress from setting error log file'."\n".'define(\'WP_DEBUG_LOG\', false);'."\n\n";
+		$markup .= '// Set the error log file'."\n".'ini_set(\'error_log\', $error_log_file);';
+		$markup .= '</textarea></p>';
 
 		// No dice? Maybe try .htaccess?
 		$markup .= '<h3>'.esc_html__('Still not working?', 'codepotent-php-error-log-viewer').'</h3>';
@@ -1003,7 +1119,34 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Render PHP errors.
+	 * Render confirmation notices
+	 *
+	 * This method renders the success and failure messages that are shown after
+	 * the log is purged with AJAX via the admin bar link. These notices are for
+	 * use in every admin view since the log can be deleted while on any screen.
+	 *
+	 * @author John Alarcon
+	 *
+	 * @since 2.2.0
+	 */
+	public function render_confirmation_notices() {
+
+		// Success message.
+		echo '<div class="'.PLUGIN_SLUG.'-success notice notice-success is-dismissible" style="display:none;">';
+		echo '    <p>'.esc_html__('Error log has been emptied.', 'codepotent-php-error-log-viewer').'</p>';
+		echo '    <button type="button" class="notice-dismiss"><span class="screen-reader-text">'.esc_html__('Dismiss this notice.', 'codepotent-php-error-log-viewer').'</span></button>';
+		echo '</div>';
+
+		// Failure message.
+		echo '<div class="'.PLUGIN_SLUG.'-failure notice notice-error is-dismissible" style="display:none;">';
+		echo '    <p>'.esc_html__('Error log purge failed. Please try again.', 'codepotent-php-error-log-viewer').'</p>';
+		echo '    <button type="button" class="notice-dismiss"><span class="screen-reader-text">'.esc_html__('Dismiss this notice.', 'codepotent-php-error-log-viewer').'</span></button>';
+		echo '</div>';
+
+	}
+
+	/**
+	 * Render PHP errors
 	 *
 	 * @author John Alarcon
 	 *
@@ -1011,6 +1154,11 @@ class PhpErrorLogViewer {
 	 *
 	 */
 	public function render_php_error_log() {
+
+		// No permission to see the log? Bail.
+		if (!current_user_can('manage_options')) {
+			return;
+		}
 
 		// Can't find error log? Describe a possible solution; return early.
 		if (!$this->error_log) {
@@ -1027,7 +1175,7 @@ class PhpErrorLogViewer {
 		}
 
 		// Print plugin title.
-		echo '<h1 id="nav-jump-top">'.PLUGIN_NAME.'</h1>';
+		echo '<h1 id="nav-jump-top">'.esc_html__('PHP Error Log', 'codepotent-php-error-log-viewer').'</h1>';
 
 		// Print filter checkboxes.
 		echo $this->markup_display_inputs($this->errors, $this->options);
@@ -1036,10 +1184,10 @@ class PhpErrorLogViewer {
 		echo $this->markup_jump_link('header');
 
 		// Print buttons for refresh and purge actions.
-		echo $this->markup_action_buttons();
+		echo $this->markup_action_buttons('top');
 
 		// Print the filesize.
-		echo $this->markup_filesize_indicator();
+		echo $this->markup_filesize_location_indicator();
 
 		// Filter before legend; for any explanatory text.
 		echo apply_filters(PLUGIN_PREFIX.'_before_legend', '');
@@ -1064,7 +1212,7 @@ class PhpErrorLogViewer {
 
 		// Print buttons to refresh and purge errors; for long pages.
 		if ($this->errors_displayed > 10) {
-			echo $this->markup_action_buttons();
+			echo $this->markup_action_buttons('bottom');
 		}
 
 		// That's a wrap – thanks, everyone!
@@ -1073,7 +1221,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Filter footer text.
+	 * Filter footer text
 	 *
 	 * @author John Alarcon
 	 *
@@ -1096,7 +1244,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Plugin activation.
+	 * Plugin activation
 	 *
 	 * @author John Alarcon
 	 *
@@ -1129,7 +1277,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Plugin deactivation.
+	 * Plugin deactivation
 	 *
 	 * @author John Alarcon
 	 *
@@ -1147,7 +1295,7 @@ class PhpErrorLogViewer {
 	}
 
 	/**
-	 * Plugin deletion.
+	 * Plugin deletion
 	 *
 	 * @author John Alarcon
 	 *
@@ -1162,293 +1310,6 @@ class PhpErrorLogViewer {
 
 		// Delete options related to the plugin.
 		delete_option(PLUGIN_PREFIX);
-
-	}
-
-	/**
-	 * Admin bar link.
-	 *
-	 * Add a link to the admin bar that leads to the PHP error log; just a minor
-	 * convenience.
-	 *
-	 * @author John Alarcon
-	 *
-	 * @since 1.1.0
-	 *
-	 * @deprecated 2.0.0 Replaced with $this->register_admin_bar() method.
-	 *
-	 */
-	public function adminbar_quicklink() {
-
-		// Flag as deprecated before proceeding; recommend an alternative.
-		_doing_it_wrong(
-			'<code>'.__METHOD__.'()</code>',
-			sprintf(
-				esc_html__('You can use the %s method of this object to register the admin bar menu item.', 'codepotent-php-error-log-viewer'),
-				'<code>'.__NAMESPACE__.'::register_admin_bar()</code>'),
-			'2.0.0'
-			);
-
-		// Bring admin bar into scope.
-		global $wp_admin_bar;
-
-		// Add the item.
-		$wp_admin_bar->add_menu([
-			'parent' => false,
-			'id'     => PLUGIN_PREFIX.'_adminbar_quicklink',
-			'title'  => esc_html__('PHP Errors', 'codepotent-php-error-log-viewer'),
-				'href'   => admin_url('tools.php?page='.PLUGIN_SHORT_SLUG),
-			'meta'   => [
-				'title' => sprintf(
-					esc_html__('PHP %s', 'codepotent-php-error-log-viewer'),
-					phpversion()
-				)
-			],
-		]);
-
-	}
-
-	/**
-	 * Enqueue CSS.
-	 *
-	 * @author John Alarcon
-	 *
-	 * @since 1.0.0
-	 *
-	 * @deprecated 2.0.0 Replaced with enqueue_global_styles() method.
-	 */
-	public function enqueue_admin_styles() {
-
-		// Flag as deprecated before proceeding; recommend an alternative.
-		_doing_it_wrong(
-			'<code>'.__METHOD__.'()</code>',
-			sprintf(
-				esc_html__('You can use the %s method of this object to enqueue the needed stylesheet.', 'codepotent-php-error-log-viewer'),
-				'<code>'.__NAMESPACE__.'::enqueue_global_styles()</code>'),
-			'2.0.0'
-			);
-
-		// Not in a view related to this plugin? Bail.
-		if (!strpos(get_current_screen()->base, PLUGIN_SHORT_SLUG)) {
-			return;
-		}
-
-		// Enqueue the styles.
-		wp_enqueue_style(PLUGIN_SLUG.'-admin', URL_STYLES.'/admin-global.css');
-
-	}
-
-	/**
-	 * Get errors from log.
-	 *
-	 * @author John Alarcon
-	 *
-	 * @since 1.0.0
-	 *
-	 * @deprecated 2.0.0
-	 *
-	 * @param string $error_log Path to the PHP error log.
-	 *
-	 * @return array Array of errors from the log.
-	 */
-	private function get_errors_raw($error_log) {
-
-		// Flag as deprecated before proceeding; recommend an alternative.
-		_doing_it_wrong(
-			'<code>'.__METHOD__.'()</code>',
-			sprintf(
-				esc_html__('You can use the %s property of the object, which now holds an array of lines read from the error log without any processing.', 'codepotent-php-error-log-viewer'),
-				'<code>$this->raw_errors</code>'),
-			'2.0.0'
-			);
-
-		// Initialize the return variable.
-		$raw_errors = [];
-
-		// Error log doesn't exist? Bail.
-		if (!file_exists($error_log)) {
-			return $raw_errors;
-		}
-
-		// Get the filesize.
-		$raw_errors['size'] = filesize($error_log);
-
-		// Get the error log's entries as an array.
-		$raw_errors['lines'] = file($error_log);
-
-		// Retrn the size/lines array.
-		return $raw_errors;
-
-	}
-
-	/**
-	 * Process errors into expected arrays.
-	 *
-	 * This method processes the raw errors array into various other arrays that
-	 * are used to determine the error type of each entry.
-	 *
-	 * @author John Alarcon
-	 *
-	 * @since 1.0.0
-	 *
-	 * @deprecated 2.0.0 Replaced with the $this->errors property.
-	 *
-	 * @param string $error_log Path to PHP error log.
-	 * @param array $options Array of display options.
-	 *
-	 * @return array[]
-	 */
-	private function get_errors_processed($error_log, $options) {
-
-		// Flag as deprecated before proceeding; recommend an alternative.
-		_doing_it_wrong(
-			'<code>'.__METHOD__.'()</code>',
-			sprintf(
-				esc_html__('You can use the %s property of the object, which now holds the processed error arrays.', 'codepotent-php-error-log-viewer'),
-				'<code>$this->errors</code>'),
-			'2.0.0'
-			);
-
-		// Initialize defaults.
-		$processed_errors = [];
-
-		// Get errors.
-		$raw_errors = $this->get_errors_raw($error_log);
-		if (!isset($raw_errors['size']) || !isset($raw_errors['lines'])) {
-			return $processed_errors;
-		}
-
-		// Grab the log size.
-		$processed_errors['size'] = $raw_errors['size'];
-
-		// Grab the raw unordered lines.
-		$processed_errors['lines'] = $raw_errors['lines'];
-
-		// Ensure defaults are set to prevent PHP warnings.
-		$processed_errors['errors'] = $this->get_error_defaults();
-
-		// Iterate over errors.
-		foreach ($raw_errors['lines'] as $n=>$error) {
-
-			$error = trim($error);
-			// Set a key depending on the type of error.
-			if (strpos($error, 'PHP Deprecated')) {
-				$error_key = 'deprecated';
-			} else if (strpos($error, 'PHP Notice')) {
-				$error_key = 'notice';
-			} else if (substr($error, 0, 11) === 'Stack trace' || strpos($error, 'Stack trace')) {
-				$error_key = 'stack_trace_title';
-			} else if (substr($error, 0, 1) === '#' || strpos($error, 'stderr: #')) {
-				$error_key = 'stack_trace_step';
-			} else if (substr($error, 0, 9) === 'thrown in' || strpos($error, 'thrown in')) {
-				$error_key = 'stack_trace_origin';
-			} else if (strpos($error, 'error:') || strpos($error, 'stderr:') || strpos($error, '[error]')) {
-				$error_key = 'error';
-			} else if (strpos($error, 'PHP Warning') || strpos($error, '[warn]')) {
-				$error_key = 'warning';
-			} else {
-				$error_key = 'other';
-			}
-
-			// Map the URL to a type in all cases.
-			$processed_errors['mapped'][$n] = $error_key;
-
-			// Capture only those errors that will be displayed.
-			if ($options[$error_key]) {
-				$processed_errors['errors'][$error_key][$n] = $error;
-			}
-
-			// Bold (most) error titles.
-			$processed_errors['errors'][$error_key][$n] =
-			preg_replace(
-					'|(PHP )([A-Za-z]){1,} *([A-Za-z ]){1,}|',
-					'<strong>${0}</strong>',
-					$error
-					);
-
-			// Strip: mod_fcgid: stderr:
-			$processed_errors['errors'][$error_key][$n] = str_replace('mod_fcgid: stderr: ', '', $processed_errors['errors'][$error_key][$n]);
-
-			// Strip datetime, else wrap it for styling purposes.
-			if (empty($options['datetime'])) {
-				$processed_errors['errors'][$error_key][$n] = preg_replace('|([){1}([A-Za-z0-9_ -:\/]){1,}(]){1}|', '', $processed_errors['errors'][$error_key][$n]);
-			} else {
-				$processed_errors['errors'][$error_key][$n] = preg_replace('|([){1}([A-Za-z0-9_ -:\/]){1,}(]){1}|', '<span class="'.PLUGIN_SLUG.'-datetime">${0}</span>', $processed_errors['errors'][$error_key][$n]);
-			}
-
-		}
-
-		// Return the processed errors.
-		return $processed_errors;
-
-	}
-
-	/**
-	 * Count displayed rows.
-	 *
-	 * This method counts the errors that are currently being displayed. This is
-	 * used to show the refresh/purge buttons at the bottom when the display has
-	 * quite a few errors showing.
-	 *
-	 * @author John Alarcon
-	 *
-	 * @since 1.0.0
-	 *
-	 * @deprecated 2.0.0 Use $this->errors_displayed instead.
-	 *
-	 * @param array $errors MulLine numbers keyed by error type.
-	 * @param array $options Which error types to display.
-	 *
-	 * @return int Total number of rows to be displayed.
-	 */
-	public function count_displayed_items($errors, $options) {
-
-		// Flag as deprecated before proceeding; recommend an alternative.
-		_doing_it_wrong(
-			'<code>'.__METHOD__.'()</code>',
-			sprintf(
-				esc_html__('You can use the %s property of the object, which now holds the number of displayed errors.', 'codepotent-php-error-log-viewer'),
-				'<code>$this->errors_displayed</code>'),
-			'2.0.0'
-			);
-
-		// Initialization.
-		$displayed_errors = 0;
-
-		// No errors mapped? Bail.
-		if (empty($errors['mapped'])) {
-			return $displayed_errors;
-		}
-
-		// Iterate over error type map.
-		foreach ($errors['mapped'] as $error_type) {
-
-			// Not displaying this type of error? Don't count it.
-			if (!$options[$error_type]) {
-				continue;
-			}
-
-			// Count errors...
-			if ($error_type === 'stack_trace_title') {
-				// ...only count title entries for stack traces...
-				if (!$options['error']) {
-					$displayed_errors++;
-				}
-			} else if ($error_type === 'stack_trace_step') {
-				// ...skip counting stack trace steps...
-				continue;
-			} else if ($error_type === 'stack_trace_origin') {
-				// ...skip counting stack trace origins...
-				continue;
-			} else {
-				// Count the error.
-				$displayed_errors++;
-			}
-
-		}
-
-		// Total displayed error items.
-		return $displayed_errors;
 
 	}
 
