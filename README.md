@@ -1,5 +1,3 @@
-### Always use the **[latest release](https://github.com/codepotent/php-error-log-viewer/releases/latest)** on production sites! 
-
 The PHP Error Log Viewer plugin for ClassicPress brings your error log straight into your dashboard. Color-coding helps you to quickly scan even the longest of error logs. Or, just filter out the errors you don't want to see. No more wall-of-text error messages – this plugin turns your PHP error log into an incredibly useful display.
 
 ![PHP Error Log Viewer plugin for ClassicPress by Code Potent](https://codepotent.com/wp-content/uploads/2021/03/codepotent-php-error-log-viewer-plugin-for-classicpress-image-05.png)
@@ -13,32 +11,32 @@ There are lots of debugging plugins out there – _debugging suites_, really. Th
 If you have grown tired of flipping back and forth between screens/browsers/apps/whatever to check and recheck your PHP error log as you're writing code, this will be incredibly handy for you. There's a link to the error log within reach at all times and it doesn't require any special configuration.
 
 
-### Viewing the Error Log 
+### Viewing the Error Log
 Click the `PHP Errors` menu item in your admin bar. Hover the menu item momentarily and it will reveal your current PHP version. Alternatively, you can access the error log by navigating to `Dashboard > Tools > PHP Error Log`.
 
 ![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2020/02/codepotent-php-error-log-viewer-plugin-for-classicpress-screenshot-02.png)
 
-### Filtering the Error Log 
+### Filtering the Error Log
 The checkboxes across the top of the display allow you to show and hide each of the various types of errors: `Deprecated`, `Notice`, `Warning`, `Error`, and `Other`. There are also checkboxes to show and hide the time/date, stack traces, and to sort the error log in reverse. Tick your preferred boxes and click the `Apply Filters` button to update the display.
 
 ![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2020/02/codepotent-php-error-log-viewer-plugin-for-classicpress-screenshot-03.png)
 
-### Refreshing the Error Log 
+### Refreshing the Error Log
 When viewing the error log, you will find a button to `Refresh Error Log` at the right side of the page. Clicking this button has the same effect as clicking your browser's refresh button. The error log will be re-read and displayed fresh.
 
 ![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2019/08/codepotent-php-error-log-viewer-plugin-for-classicpress-image-02.png)
 
-### Purging the Error Log 
+### Purging the Error Log
 When viewing the error log, you will find a button to `Purge Error Log` at the right side of the page. Clicking this button will purge all messages from the error log. A confirmation dialog prevents accidental deletion. If your error log is not writable by the PHP process, you will not see this button.
 
 ![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2019/08/codepotent-php-error-log-viewer-plugin-for-classicpress-image-02.png)
 
-### Purging the Error Log via AJAX 
+### Purging the Error Log via AJAX
 In the admin bar, you will find a link `PHP Errors` which, when hovered, will expose a link to `Purge Error Log`. Clicking this button will purge all messages from the error log without redirecting you away from the current page. A confirmation dialog prevents accidental deletion. If your error log is not writable by the PHP process, you will not see this link.
 
 ![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2021/03/codepotent-php-error-log-viewer-plugin-for-classicpress-image-04.png)
 
-### Manually Triggering Errors 
+### Manually Triggering Errors
 As of version 2.2.0, there is a function that allows you to manually trigger user-level notices, warnings, or errors and have them neatly displayed in the error log. Here is an example of creating your own wrapper function for added convenience.
 
 ```
@@ -80,19 +78,19 @@ As of version 2.2.0, there is a function that allows you to manually trigger use
 ### Display Options
 The checkboxes at the top of the error log display allow you to choose which types of error messages you want to see. Check any of the boxes and click the `Apply Filter` button to update the display.
 * **Date/Time**
-Check this box to show dates, times, and other meta data.
+  Check this box to show dates, times, and other meta data.
 * **Notice**
-Check this box to show non-critical PHP notices.
+  Check this box to show non-critical PHP notices.
 * **Warning**
-Check this box to show non-critical PHP warnings.
+  Check this box to show non-critical PHP warnings.
 * **Error**
-Check this box to show critical PHP errors.
+  Check this box to show critical PHP errors.
 * **Other**
-Check this box to show any other errors that didn't meet the above criteria.
+  Check this box to show any other errors that didn't meet the above criteria.
 * **Show Stack Traces**
-Check this box to show stack traces for critical errors. Note that not all critical errors will generate a stack trace.
+  Check this box to show stack traces for critical errors. Note that not all critical errors will generate a stack trace.
 * **Reverse Sort**
-Check this box to display the error log with latest errors at the top.
+  Check this box to display the error log with latest errors at the top.
 
 ---
 
@@ -114,7 +112,7 @@ add_filter('codepotent_php_errror_log_viewer_primary_alert', 'yourprefix_hide_se
 
 --- 
 
-### Add Content Before Legend 
+### Add Content Before Legend
 In cases where you need to insert some contextual information, either of the following filters can be used to place the content before or after the legend. These filters receive an empty string as an argument.
 
 <pre>function yourprefix_before_error_log_legend($markup) {
@@ -125,7 +123,7 @@ add_filter('codepotent_php_errror_log_viewer_before_legend', 'yourprefix_before_
 </pre>
 
 --- 
-### Add Content After Legend 
+### Add Content After Legend
 Identical to the filter above, except this filter places your contextual content below the legend.
 
 <pre>function yourprefix_after_error_log_legend($markup) {
@@ -176,9 +174,3 @@ To override the color-coding for the error messages and legend, copy the followi
 	}
 
 </pre>
-
----
-
-
-
-[![](https://static.codepotent.com/images/logotype/code-potent-logotype-wordmark-252x36.png)](https://codepotent.com/classicpress/plugins/)
