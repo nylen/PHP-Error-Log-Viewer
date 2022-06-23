@@ -1,6 +1,6 @@
 The PHP Error Log Viewer plugin for ClassicPress brings your error log straight into your dashboard. Color-coding helps you to quickly scan even the longest of error logs. Or, just filter out the errors you don't want to see. No more wall-of-text error messages – this plugin turns your PHP error log into an incredibly useful display.
 
-![PHP Error Log Viewer plugin for ClassicPress by Code Potent](https://codepotent.com/wp-content/uploads/2021/03/codepotent-php-error-log-viewer-plugin-for-classicpress-image-05.png)
+![PHP Error Log Viewer plugin for ClassicPress by Code Potent](images/banner.svg)
 
 ## Fast, Lightweight, and User-Friendly
 
