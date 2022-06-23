@@ -4,7 +4,7 @@
  * -----------------------------------------------------------------------------
  * Plugin Name: PHP Error Log Viewer
  * Description: Create a browser-viewable display of the PHP error log. Messages are styled, filterable, and reverse-sortable to facilitate quick skimming.
- * Version: 2.3.0
+ * Version: 2.4.0
  * Author: ClassicPress Contributors
  * Author URI: https://www.classicpress.net
  * Plugin URI: https://www.classicpress.net
@@ -147,36 +147,6 @@ class PhpErrorLogViewer {
 		register_activation_hook(__FILE__,   [$this, 'activate_plugin']);
 		register_deactivation_hook(__FILE__, [$this, 'deactivate_plugin']);
 
-		// POST-ADOPTION: Remove these actions before pushing your next update.
-		add_action('upgrader_process_complete', [$this, 'enable_adoption_notice'], 10, 2);
-		add_action('admin_notices', [$this, 'display_adoption_notice']);
-
-	}
-
-	// POST-ADOPTION: Remove this method before pushing your next update.
-	public function enable_adoption_notice($upgrader_object, $options) {
-		if ($options['action'] === 'update') {
-			if ($options['type'] === 'plugin') {
-				if (!empty($options['plugins'])) {
-					if (in_array(plugin_basename(__FILE__), $options['plugins'])) {
-						set_transient(PLUGIN_PREFIX.'_adoption_complete', 1);
-					}
-				}
-			}
-		}
-	}
-
-	// POST-ADOPTION: Remove this method before pushing your next update.
-	public function display_adoption_notice() {
-		if (get_transient(PLUGIN_PREFIX.'_adoption_complete')) {
-			delete_transient(PLUGIN_PREFIX.'_adoption_complete');
-			echo '<div class="notice notice-success is-dismissible">';
-			echo '<h3 style="margin:25px 0 15px;padding:0;color:#e53935;">IMPORTANT <span style="color:#aaa;">information about the <strong style="color:#333;">'.PLUGIN_NAME.'</strong> plugin</h3>';
-			echo '<p style="margin:0 0 15px;padding:0;font-size:14px;">The <strong>'.PLUGIN_NAME.'</strong> plugin has been officially adopted and is now managed by <a href="'.PLUGIN_AUTHOR_URL.'" rel="noopener" target="_blank" style="text-decoration:none;">'.PLUGIN_AUTHOR.'<span class="dashicons dashicons-external" style="display:inline;font-size:98%;"></span></a>, a longstanding and trusted ClassicPress developer and community member. While it has been wonderful to serve the ClassicPress community with free plugins, tutorials, and resources for nearly 3 years, it\'s time that I move on to other endeavors. This notice is to inform you of the change, and to assure you that the plugin remains in good hands. I\'d like to extend my heartfelt thanks to you for making my plugins a staple within the community, and wish you great success with ClassicPress!</p>';
-			echo '<p style="margin:0 0 15px;padding:0;font-size:14px;font-weight:600;">All the best!</p>';
-			echo '<p style="margin:0 0 15px;padding:0;font-size:14px;">~ John Alarcon <span style="color:#aaa;">(Code Potent)</span></p>';
-			echo '</div>';
-		}
 	}
 
 	/**
@@ -194,6 +164,11 @@ class PhpErrorLogViewer {
 
 		// Admins only.
 		if (!current_user_can('manage_options')) {
+			return;
+		}
+		
+		// No way to get the link.
+		if (!isset($_SERVER['REQUEST_SCHEME']) || !isset($_SERVER['HTTP_HOST']) || !isset($_SERVER['REQUEST_URI'])) {
 			return;
 		}
 
@@ -215,9 +190,9 @@ class PhpErrorLogViewer {
 		// Filters to remove alert bubbles.
 		$primary_alert = apply_filters(PLUGIN_PREFIX.'_primary_alert', $primary_alert);
 		$secondary_alert = apply_filters(PLUGIN_PREFIX.'_secondary_alert', $secondary_alert);
-
+		
 		// Assemble the return URL.
-		$return_url = $_SERVER['REQUEST_SCHEME'].'://'.$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+		$return_url =  esc_url_raw(wp_unslash($_SERVER['REQUEST_SCHEME']).'://'. wp_unslash($_SERVER['HTTP_HOST']). wp_unslash($_SERVER['REQUEST_URI']));
 
 		// Bring the admin bar into scope.
 		global $wp_admin_bar;
@@ -240,7 +215,7 @@ class PhpErrorLogViewer {
 		if (is_writable($this->error_log)) {
 			$wp_admin_bar->add_menu([
 				'parent' => PLUGIN_PREFIX.'_admin_bar',
-				'title' => __('Purge Error Log'),
+				'title' => esc_html__('Purge Error Log', 'codepotent-php-error-log-viewer'),
 				'id' => PLUGIN_SLUG.'-admin-bar-purge-link',
 				'href' => '#',
 				'meta' => [
@@ -314,11 +289,16 @@ class PhpErrorLogViewer {
 			return;
 		}
 
+		// No way to get the link.
+		if (!isset($_SERVER['HTTP_HOST']) || !isset($_SERVER['REQUEST_URI'])) {
+			return;
+		}
+
 		// Applies for all admin views.
-		wp_enqueue_script(PLUGIN_SLUG.'-global', URL_SCRIPTS.'/global.js', ['jquery']);
+		wp_enqueue_script(PLUGIN_SLUG.'-global', URL_SCRIPTS.'/global.js', ['jquery'], false, false);
 
 		// For redirecting back to the current page.
-		$redirect_target = (is_ssl()?'https://':'http://').$_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI'];
+		$redirect_target = esc_url_raw((is_ssl()?'https://':'http://').wp_unslash($_SERVER['HTTP_HOST'].$_SERVER['REQUEST_URI']));
 
 		// Setup a deletion-link URL.
 		$deletion_link = esc_url(
@@ -334,10 +314,10 @@ class PhpErrorLogViewer {
 			'ajax_url'          => admin_url('admin-ajax.php'),
 			'ajax_nonce'        => wp_create_nonce('purge_error_log'),
 			'deletion_link'     => $deletion_link,
-			'text_confirmation' => esc_html('Remove all entries from the PHP error log?', 'codepotent-php-error-log-viewer'),
-			'text_zero_bytes'   => esc_html('0 bytes', 'codepotent-php-error-log-viewer'),
-			'text_ajax_success' => esc_html('Error log successfully purged.', 'codepotent-php-error-log-viewer'),
-			'text_ajax_failure' => esc_html('Something went wrong; error log was not purged.', 'codepotent-php-error-log-viewer'),
+			'text_confirmation' => esc_html__('Remove all entries from the PHP error log?', 'codepotent-php-error-log-viewer'),
+			'text_zero_bytes'   => esc_html__('0 bytes', 'codepotent-php-error-log-viewer'),
+			'text_ajax_success' => esc_html__('Error log successfully purged.', 'codepotent-php-error-log-viewer'),
+			'text_ajax_failure' => esc_html__('Something went wrong; error log was not purged.', 'codepotent-php-error-log-viewer'),
 		];
 
 		// Scope the above PHP array out to the JS file.
@@ -577,24 +557,24 @@ class PhpErrorLogViewer {
 			return;
 		}
 
-		// No nonce? Bail.
-		if (!isset($_GET['_wpnonce'])) {
+		// No nonce or action? Bail.
+		if (!isset($_GET['_wpnonce']) || !isset($_GET['purge_errors'])) {
 			return;
 		}
 
 		// Suspicious nonce? Bail.
-		if (!wp_verify_nonce($_GET['_wpnonce'], PLUGIN_PREFIX.'_purge_error_log')) {
+		if (!wp_verify_nonce(sanitize_key(wp_unslash($_GET['_wpnonce'])), PLUGIN_PREFIX.'_purge_error_log')) {
 			return;
 		}
 
 		// Not requesting purge? Bail.
-		if (!isset($_GET['purge_errors']) || !$_GET['purge_errors']) {
+		if (!(bool)$_GET['purge_errors']) {
 			return;
 		}
 
 		// Overwrite log file with 0 bytes; set transient.
 		if (!empty($this->error_log) && is_writable($this->error_log)) {
-			if (file_put_contents($this->error_log, '') !== false) {
+			if (file_put_contents($this->error_log, '') !== false) { // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 				set_transient(PLUGIN_PREFIX.'_purged', 1, 120);
 			}
 		}
@@ -602,7 +582,7 @@ class PhpErrorLogViewer {
 		// In case we need a custom redirect.
 		$redirect_url = admin_url('tools.php?page='.PLUGIN_SHORT_SLUG);
 		if (!empty($_GET['redirect_url'])) {
-			$redirect_url = esc_url($_GET['redirect_url']);
+			$redirect_url = esc_url_raw(wp_unslash($_GET['redirect_url']));
 		}
 
 		// Redirect.
@@ -628,7 +608,7 @@ class PhpErrorLogViewer {
 		// If nonce checks out, purge the error log.
 		if (check_ajax_referer( 'purge_error_log' )) {
 			if (!empty($this->error_log) && is_writable($this->error_log)) {
-				file_put_contents($this->error_log, '');
+				file_put_contents($this->error_log, ''); // phpcs:ignore WordPress.WP.AlternativeFunctions.file_system_read_file_put_contents
 			}
 		}
 
@@ -660,7 +640,7 @@ class PhpErrorLogViewer {
 		}
 
 		// If nonce is suspect, bail.
-		if (!wp_verify_nonce($_POST[$nonce_name], $nonce_name)) {
+		if (!wp_verify_nonce(sanitize_key(wp_unslash($_POST[$nonce_name])), $nonce_name)) {
 			return false;
 		}
 
@@ -1157,13 +1137,13 @@ class PhpErrorLogViewer {
 	public function render_confirmation_notices() {
 
 		// Success message.
-		echo '<div class="'.PLUGIN_SLUG.'-success notice notice-success is-dismissible" style="display:none;">';
+		echo '<div class="'.esc_html(PLUGIN_SLUG).'-success notice notice-success is-dismissible" style="display:none;">';
 		echo '    <p>'.esc_html__('Error log has been emptied.', 'codepotent-php-error-log-viewer').'</p>';
 		echo '    <button type="button" class="notice-dismiss"><span class="screen-reader-text">'.esc_html__('Dismiss this notice.', 'codepotent-php-error-log-viewer').'</span></button>';
 		echo '</div>';
 
 		// Failure message.
-		echo '<div class="'.PLUGIN_SLUG.'-failure notice notice-error is-dismissible" style="display:none;">';
+		echo '<div class="'.esc_html(PLUGIN_SLUG).'-failure notice notice-error is-dismissible" style="display:none;">';
 		echo '    <p>'.esc_html__('Error log purge failed. Please try again.', 'codepotent-php-error-log-viewer').'</p>';
 		echo '    <button type="button" class="notice-dismiss"><span class="screen-reader-text">'.esc_html__('Dismiss this notice.', 'codepotent-php-error-log-viewer').'</span></button>';
 		echo '</div>';
@@ -1172,6 +1152,8 @@ class PhpErrorLogViewer {
 
 	/**
 	 * Render PHP errors
+	 *
+	 * This functions render HTML, so escaping function are not used.
 	 *
 	 * @author John Alarcon
 	 *
@@ -1187,41 +1169,41 @@ class PhpErrorLogViewer {
 
 		// Can't find error log? Describe a possible solution; return early.
 		if (!$this->error_log) {
-			echo $this->markup_error_log_404();
+			echo $this->markup_error_log_404(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			return;
 		}
 
 		// Outer container.
-		echo '<div class="wrap" id="'.PLUGIN_SLUG.'">';
+		echo '<div class="wrap" id="'.esc_html(PLUGIN_SLUG).'">';
 
 		// Display success message if error log was just purged.
 		if (get_transient(PLUGIN_PREFIX.'_purged')) {
-			echo $this->markup_success_message();
+			echo $this->markup_success_message();  // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 
 		// Print plugin title.
 		echo '<h1 id="nav-jump-top">'.esc_html__('PHP Error Log', 'codepotent-php-error-log-viewer').'</h1>';
 
 		// Print filter checkboxes.
-		echo $this->markup_display_inputs($this->errors, $this->options);
+		echo $this->markup_display_inputs($this->errors, $this->options);  // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Print a jump-link in the header.
-		echo $this->markup_jump_link('header');
+		echo $this->markup_jump_link('header'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Print buttons for refresh and purge actions.
-		echo $this->markup_action_buttons('top');
+		echo $this->markup_action_buttons('top'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Print the filesize.
-		echo $this->markup_filesize_location_indicator();
+		echo $this->markup_filesize_location_indicator(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Filter before legend; for any explanatory text.
-		echo apply_filters(PLUGIN_PREFIX.'_before_legend', '');
+		echo apply_filters(PLUGIN_PREFIX.'_before_legend', ''); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Print the legend.
-		echo $this->markup_legend();
+		echo $this->markup_legend(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Filter after legend; for any explanatory text.
-		echo apply_filters(PLUGIN_PREFIX.'_after_legend', '');
+		echo apply_filters(PLUGIN_PREFIX.'_after_legend', '');  // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// If error log is empty, go no further; close wrapper and return.
 		if (empty($this->errors)) {
@@ -1230,14 +1212,14 @@ class PhpErrorLogViewer {
 		}
 
 		// Print the error rows.
-		echo $this->markup_error_rows();
+		echo $this->markup_error_rows(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Another jump-link, if the display grows long.
-		echo $this->markup_jump_link('footer');
+		echo $this->markup_jump_link('footer');  // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 
 		// Print buttons to refresh and purge errors; for long pages.
 		if ($this->errors_displayed > 10) {
-			echo $this->markup_action_buttons('bottom');
+			echo $this->markup_action_buttons('bottom'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 
 		// That's a wrap – thanks, everyone!
@@ -1260,7 +1242,7 @@ class PhpErrorLogViewer {
 
 		// Are we on this post type's screen? If so, change the footer text.
 		if (strpos(get_current_screen()->base, PLUGIN_SHORT_SLUG)) {
-			$text = '<span id="footer-thankyou" style="vertical-align:text-bottom;"><a href="'.PLUGIN_AUTHOR_URL.'/" title="'.PLUGIN_DESCRIPTION.'">'.PLUGIN_NAME.'</a> '.PLUGIN_VERSION.' &#8211; by <a href="'.PLUGIN_AUTHOR_URL.'" title="'.VENDOR_TAGLINE.'">'.PLUGIN_AUTHOR.'</a></span>';
+			$text = '<span id="footer-thankyou" style="vertical-align:text-bottom;"><a href="'.PLUGIN_AUTHOR_URL.'/" title="'.PLUGIN_DESCRIPTION.'">'.PLUGIN_NAME.'</a> '.PLUGIN_VERSION.' &#8211; by <a href="'.PLUGIN_AUTHOR_URL.'">'.PLUGIN_AUTHOR.'</a></span>';
 		}
 
 		// Return the string.
