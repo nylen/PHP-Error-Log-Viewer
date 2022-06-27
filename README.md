@@ -1,6 +1,6 @@
 The PHP Error Log Viewer plugin for ClassicPress brings your error log straight into your dashboard. Color-coding helps you to quickly scan even the longest of error logs. Or, just filter out the errors you don't want to see. No more wall-of-text error messages – this plugin turns your PHP error log into an incredibly useful display.
 
-![PHP Error Log Viewer plugin for ClassicPress by Code Potent](https://codepotent.com/wp-content/uploads/2021/03/codepotent-php-error-log-viewer-plugin-for-classicpress-image-05.png)
+![PHP Error Log Viewer plugin for ClassicPress by Code Potent](images/banner.svg)
 
 ## Fast, Lightweight, and User-Friendly
 
@@ -14,27 +14,17 @@ If you have grown tired of flipping back and forth between screens/browsers/apps
 ### Viewing the Error Log
 Click the `PHP Errors` menu item in your admin bar. Hover the menu item momentarily and it will reveal your current PHP version. Alternatively, you can access the error log by navigating to `Dashboard > Tools > PHP Error Log`.
 
-![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2020/02/codepotent-php-error-log-viewer-plugin-for-classicpress-screenshot-02.png)
-
 ### Filtering the Error Log
 The checkboxes across the top of the display allow you to show and hide each of the various types of errors: `Deprecated`, `Notice`, `Warning`, `Error`, and `Other`. There are also checkboxes to show and hide the time/date, stack traces, and to sort the error log in reverse. Tick your preferred boxes and click the `Apply Filters` button to update the display.
-
-![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2020/02/codepotent-php-error-log-viewer-plugin-for-classicpress-screenshot-03.png)
 
 ### Refreshing the Error Log
 When viewing the error log, you will find a button to `Refresh Error Log` at the right side of the page. Clicking this button has the same effect as clicking your browser's refresh button. The error log will be re-read and displayed fresh.
 
-![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2019/08/codepotent-php-error-log-viewer-plugin-for-classicpress-image-02.png)
-
 ### Purging the Error Log
 When viewing the error log, you will find a button to `Purge Error Log` at the right side of the page. Clicking this button will purge all messages from the error log. A confirmation dialog prevents accidental deletion. If your error log is not writable by the PHP process, you will not see this button.
 
-![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2019/08/codepotent-php-error-log-viewer-plugin-for-classicpress-image-02.png)
-
 ### Purging the Error Log via AJAX
 In the admin bar, you will find a link `PHP Errors` which, when hovered, will expose a link to `Purge Error Log`. Clicking this button will purge all messages from the error log without redirecting you away from the current page. A confirmation dialog prevents accidental deletion. If your error log is not writable by the PHP process, you will not see this link.
-
-![PHP Error Log Viewer plugin for ClassicPress](https://codepotent.com/wp-content/uploads/2021/03/codepotent-php-error-log-viewer-plugin-for-classicpress-image-04.png)
 
 ### Manually Triggering Errors
 As of version 2.2.0, there is a function that allows you to manually trigger user-level notices, warnings, or errors and have them neatly displayed in the error log. Here is an example of creating your own wrapper function for added convenience.

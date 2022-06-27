@@ -26,6 +26,9 @@ if (!defined('ABSPATH')) {
  * A function to trigger an error which will dump arbitrary $data into the error
  * log, allowing it to be preserved, styled, filtered, sorted, and purged.
  *
+ * So it's just ok to use trigger_errors() and print_r().
+ * Also output is not escaped as it's intended to be used by a programmer.
+ *
  * @author John Alarcon
  *
  * @since 2.2.0
@@ -104,9 +107,9 @@ function codepotent_php_error_log_viewer_log($data, $type='notice', $file=false,
 	}
 
 	// Convert $data into a preformatted string and add it to the message.
-	$msg .= '<pre>'.str_replace(["\r","\n"], '<br>', print_r($data, true)).'</pre>';
+	$msg .= '<pre>'.str_replace(["\r","\n"], '<br>', print_r($data, true)).'</pre>'; // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_print_r
 
 	// Send the whole affair off to the error log.
-	trigger_error($msg, $error_level);
+	trigger_error($msg, $error_level); // phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_trigger_error,WordPress.Security.EscapeOutput.OutputNotEscaped
 
 }
